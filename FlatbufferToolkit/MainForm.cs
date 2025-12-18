@@ -1,5 +1,6 @@
 using Be.Windows.Forms;
 using FlatBuffersParser;
+using FlatbufferToolkit.UI.HexView;
 using FlatbufferToolkit.UI.IDE;
 using System.ComponentModel.Design;
 using System.Diagnostics;
@@ -65,9 +66,13 @@ namespace FlatbufferHelper
             tableLayoutPanel1.PerformLayout();
         }
 
-        private void UpdateDataInspectorValues()
+        private void UpdateSelectedHex()
         {
-            byte[] val = GetSelectedBytes();
+            var start = hexView.SelectionStart;
+            var length = hexView.SelectionLength;
+            hexLbl.Text = string.Format("Hex: 0x{0} | 0x{1} bytes", start.ToString("X"), length.ToString("X"));
+
+            byte[] val = hexView.GetSelectedBytes();
             if (val.Count() <= 0) return;
 
             dataInspRowLut["U8"].Cells[1].Value = (byte)val[0];
@@ -80,31 +85,6 @@ namespace FlatbufferHelper
             dataInspRowLut["S64"].Cells[1].Value = BitConverter.ToInt64(val);
             dataInspRowLut["Float"].Cells[1].Value = BitConverter.ToSingle(val);
             dataInspRowLut["Double"].Cells[1].Value = BitConverter.ToDouble(val);
-        }
-
-        byte[] GetSelectedBytes()
-        {
-            long start = hexView.SelectionStart;
-            long length = hexView.SelectionLength;
-
-            if (length == 0) return Array.Empty<byte>();
-
-            byte[] buffer = new byte[8];
-
-            for (long i = 0; i < Math.Min(length, 8); i++)
-            {
-                buffer[i] = hexView.ByteProvider.ReadByte(start + i);
-            }
-
-            return buffer;
-        }
-
-        private void SelectData()
-        {
-            var start = hexView.SelectionStart;
-            var length = hexView.SelectionLength;
-            UpdateDataInspectorValues();
-            hexLbl.Text = string.Format("Hex: 0x{0} | 0x{1} bytes", start.ToString("X"), length.ToString("X"));
         }
 
         private void ParseSchema()
@@ -194,7 +174,7 @@ namespace FlatbufferHelper
 
         private void hexView_MouseUp(object sender, MouseEventArgs e)
         {
-            SelectData();
+            UpdateSelectedHex();
         }
 
         private void dataInspectorToolStripMenuItem_Click(object sender, EventArgs e)
