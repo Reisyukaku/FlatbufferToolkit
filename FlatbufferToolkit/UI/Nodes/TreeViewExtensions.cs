@@ -6,10 +6,10 @@ public static class TreeViewExtensions
     {
         if (tree.InvokeRequired)
         {
-            tree.Invoke(new Action(() =>
+            tree.Invoke(() =>
             {
                 tree.Nodes.Add(nodes);
-            }));
+            });
         }
         else
         {

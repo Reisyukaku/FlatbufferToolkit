@@ -9,7 +9,7 @@ public enum LogLevel
 
 public sealed class Logger
 {
-    private static Logger _instance;
+    private static Logger? _instance;
     private static readonly object _lock = new();
 
     private readonly RichTextBox _textBox;
@@ -50,7 +50,7 @@ public sealed class Logger
 
         if (_textBox.InvokeRequired)
         {
-            _textBox.BeginInvoke(new Action(() =>
+            _textBox.BeginInvoke(() =>
             {
                 var col = lvl switch
                 {
@@ -62,7 +62,7 @@ public sealed class Logger
                 _textBox.SelectionColor = col;
                 _textBox.AppendText(line);
                 _textBox.SelectionColor = Color.Black;
-            }));
+            });
         }
         else
         {

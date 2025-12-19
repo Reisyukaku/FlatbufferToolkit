@@ -36,7 +36,7 @@ public class FbsType
     public string EnumName { get; set; }
     public int ArrayLength { get; set; }
 
-    public bool IsScalar => BaseType >= BaseType.Bool && BaseType <= BaseType.Double;
+    public bool IsScalar => BaseType is (>= BaseType.Bool and <= BaseType.Double);
     public bool IsVector => BaseType == BaseType.Vector;
     public bool IsStruct => BaseType == BaseType.Obj;
     public bool IsString => BaseType == BaseType.String;
@@ -60,7 +60,7 @@ public class FieldDef
 public class StructDef
 {
     public string Name { get; set; }
-    public List<FieldDef> Fields { get; set; } = new();
+    public List<FieldDef> Fields { get; set; } = [];
     public bool IsStruct { get; set; }
     public int MinAlign { get; set; }
     public Dictionary<string, string> Attributes { get; set; } = new();
@@ -77,7 +77,7 @@ public class EnumDef
 {
     public string Name { get; set; }
     public BaseType UnderlyingType { get; set; }
-    public List<EnumVal> Values { get; set; } = new();
+    public List<EnumVal> Values { get; set; } = [];
     public bool IsUnion { get; set; }
     public Dictionary<string, string> Attributes { get; set; } = new();
 }
@@ -152,7 +152,7 @@ public class SchemaParser
         {
             Next();
             var identif = ParseIdentifier();
-            _schema.RootType = _currentNamespace != string.Empty ? (_currentNamespace + ".") + identif : identif;
+            _schema.RootType = _currentNamespace != string.Empty ? $"{_currentNamespace}.{identif}" : identif;
             Expect(';');
         }
         else if (IsKeyword("file_identifier"))
@@ -242,9 +242,9 @@ public class SchemaParser
             ParseMetadata(field.Attributes);
 
             // Check for metadata attributes
-            if (field.Attributes.ContainsKey("id"))
+            if (field.Attributes.TryGetValue("id", out var attribute))
             {
-                field.Id = int.Parse(field.Attributes["id"]);
+                field.Id = int.Parse(attribute);
             }
             field.Deprecated = field.Attributes.ContainsKey("deprecated");
             field.Required = field.Attributes.ContainsKey("required");
@@ -259,7 +259,7 @@ public class SchemaParser
 
         var fullName = string.IsNullOrEmpty(_currentNamespace)
             ? structDef.Name
-            : _currentNamespace + "." + structDef.Name;
+            : $"{_currentNamespace}.{structDef.Name}";
         _schema.Structs[fullName] = structDef;
     }
 
@@ -324,7 +324,7 @@ public class SchemaParser
 
         var fullName = string.IsNullOrEmpty(_currentNamespace)
             ? enumDef.Name
-            : _currentNamespace + "." + enumDef.Name;
+            : $"{_currentNamespace}.{enumDef.Name}";
         _schema.Enums[fullName] = enumDef;
     }
 

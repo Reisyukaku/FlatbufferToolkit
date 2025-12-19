@@ -11,7 +11,7 @@ namespace FlatbufferToolkit;
 public partial class MainForm : Form
 {
     private byte[] fileBytes;
-    private Dictionary<string, DataGridViewRow> dataInspRowLut = new Dictionary<string, DataGridViewRow>();
+    private Dictionary<string, DataGridViewRow> dataInspRowLut = [];
 
     public MainForm()
     {
@@ -41,10 +41,7 @@ public partial class MainForm : Form
         hexView.HighlightedRegions.Clear();
 
         var parser = new SchemaParser();
-        var schema = await Task.Run(() =>
-        {
-            return parser.Parse(schemaText);
-        });
+        var schema = await Task.Run(() => parser.Parse(schemaText));
 
         if (schema == null) goto end;
 
@@ -137,10 +134,10 @@ public partial class MainForm : Form
     {
         var start = hexView.SelectionStart;
         var length = hexView.SelectionLength;
-        hexLbl.Text = string.Format("Hex: 0x{0} | 0x{1} bytes", start.ToString("X"), length.ToString("X"));
+        hexLbl.Text = $"Hex: 0x{start:X} | 0x{length:X} bytes";
 
         byte[] val = hexView.GetSelectedBytes();
-        if (val.Count() <= 0) return;
+        if (val.Length == 0) return;
 
         dataInspRowLut["U8"].Cells[1].Value = (byte)val[0];
         dataInspRowLut["S8"].Cells[1].Value = (sbyte)val[0];
@@ -214,7 +211,7 @@ public partial class MainForm : Form
 
     private void schemaText_UpdateUI(object sender, UpdateUIEventArgs e)
     {
-        textLbl.Text = string.Format("Text: Line {0}", schemaText.CurrentLine + 1);
+        textLbl.Text = $"Text: Line {schemaText.CurrentLine + 1}";
     }
 
     private void runToolStripMenuItem_Click(object sender, EventArgs e)

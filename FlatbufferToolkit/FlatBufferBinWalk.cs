@@ -26,7 +26,7 @@ public class FlatBufferBinWalk
         Progress.Instance.Setup(_bufferSize, "Parsing binary");
         if (_schema.RootType == null)
             throw new Exception("No root_type specified in schema");
-        Dictionary<string, object> root = null;
+        Dictionary<string, object>? root;
         try
         {
             var rootStruct = _schema.Structs[_schema.RootType];
@@ -40,6 +40,7 @@ public class FlatBufferBinWalk
         }
         catch (Exception ex)
         {
+            root = null;
             Logger.Instance.Log(LogLevel.ERROR, ex.Message);
         }
         Progress.Instance.SetProgress(_bufferSize, "Done");
@@ -56,7 +57,7 @@ public class FlatBufferBinWalk
         var vtableSize = ReadUShortAt(vtableOffset);
         var tblSize = ReadUShortAt(vtableOffset+2);
 
-        thisNode.ToolTipText = $"Addr: 0x{offset.ToString("X4")} | Elements: {((vtableSize - 4) / 2)}";
+        thisNode.ToolTipText = $"Addr: 0x{offset:X4} | Elements: {(vtableSize - 4) / 2}";
         foreach (var field in structDef.Fields)
         {
             if (field.Deprecated) continue;
@@ -74,7 +75,7 @@ public class FlatBufferBinWalk
             }
 
             TreeNode elem = new TreeNode();
-            elem.ToolTipText = $"Addr: 0x{offset.ToString("X4")}";
+            elem.ToolTipText = $"Addr: 0x{offset:X4}";
 
             result[field.Name] = ReadFieldAt(field, offset + fieldOffset, ref elem);
 
@@ -95,7 +96,7 @@ public class FlatBufferBinWalk
             if (field.Deprecated) continue;
 
             TreeNode elem = new TreeNode();
-            elem.ToolTipText = $"Addr: 0x{pos.ToString("X4")}";
+            elem.ToolTipText = $"Addr: 0x{pos:X4}";
                 
             result[field.Name] = ReadFieldAt(field, pos, ref elem);
 
@@ -111,13 +112,13 @@ public class FlatBufferBinWalk
     {
         Seek(pos);
             
-        object val = null;
+        object? val = null;
 
         node.Text = string.Empty;
-        //Everything that isnt a table/struct/vec should be shown as var:val
+        //Everything that isn't a table/struct/vec should be shown as var:val
         //Others are var:type, with vals as children
         if (field.Type.IsScalar || field.Type.IsString)
-            node.Text = field.Name + ":";
+            node.Text = $"{field.Name}:";
         switch (field.Type.BaseType)
         {
             case BaseType.Bool: val = _reader.ReadByte() != 0; break;
@@ -139,7 +140,7 @@ public class FlatBufferBinWalk
         {
             case BaseType.String: 
                 val = ReadStringAt(pos);
-                node.Text += string.Format("\"{0}\"", val); 
+                node.Text += $"\"{val}\""; 
                 break;
             case BaseType.Vector:
                 var typeName = field.Type.ElementType == BaseType.Obj ? field.Type.StructName : field.Type.ElementType.ToString();
@@ -162,6 +163,7 @@ public class FlatBufferBinWalk
                 break;
         }
 
+        ArgumentNullException.ThrowIfNull(val);
         return val;
     }
 
@@ -179,12 +181,12 @@ public class FlatBufferBinWalk
             var elemPos = dataOffset + i * elemSize;
 
             var child = new TreeNode(field.Type.StructName);
-            child.ToolTipText = $"Addr: 0x{elemPos.ToString("X4")}";
+            child.ToolTipText = $"Addr: 0x{elemPos:X4}";
             if (field.Type.ElementType == BaseType.Obj)
             {
                 var tableOffset = elemPos + ReadIntAt(elemPos);
                 var structDef = _schema.Structs.Values.FirstOrDefault(s => s.Name == field.Type.StructName || s.Name.EndsWith("." + field.Type.StructName));
-                object val = null;
+                object? val = null;
                 if (structDef != null)
                 {
                     if (structDef.IsStruct)
@@ -192,6 +194,7 @@ public class FlatBufferBinWalk
                     else
                         val = ReadTable(structDef, tableOffset, ref child);
                 }
+                ArgumentNullException.ThrowIfNull(val);
                 list.Add(val);
             }
             else
@@ -217,10 +220,10 @@ public class FlatBufferBinWalk
         var stringOffset = pos + ReadIntAt(pos);
         var length = ReadIntAt(stringOffset);
         Seek(stringOffset + 4);
-        return Encoding.UTF8.GetString(_reader.ReadBytes((int)length));
+        return Encoding.UTF8.GetString(_reader.ReadBytes(length));
     }
 
-    private object GetDefaultValue(FieldDef field)
+    private static object GetDefaultValue(FieldDef field)
     {
         if (!string.IsNullOrEmpty(field.DefaultValue))
         {
@@ -252,7 +255,7 @@ public class FlatBufferBinWalk
             BaseType.UByte or BaseType.UShort or BaseType.UInt or BaseType.ULong => 0UL,
             BaseType.Float => 0.0f,
             BaseType.Double => 0.0,
-            _ => null
+            _ => throw new Exception("No default value for this type"),
         };
     }
 

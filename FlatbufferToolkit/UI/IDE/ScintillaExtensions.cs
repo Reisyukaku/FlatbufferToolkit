@@ -4,20 +4,20 @@ namespace FlatbufferToolkit.UI.IDE;
 
 public static class ScintillaExtensions
 {
-    private static readonly string[] Keywords = new[]
-    {
+    private static readonly string[] Keywords =
+    [
         "namespace", "table", "struct", "enum", "union", "root_type",
         "file_extension", "file_identifier", "attribute", "rpc_service",
         "include", "native_include"
-    };
+    ];
 
-    private static readonly string[] Types = new[]
-    {
+    private static readonly string[] Types =
+    [
         "bool", "byte", "ubyte", "short", "ushort", "int", "uint",
         "float", "long", "ulong", "double", "int8", "uint8", "int16",
         "uint16", "int32", "uint32", "int64", "uint64", "float32",
         "float64", "string"
-    };
+    ];
 
     public static void InitFbsLexer(this Scintilla scintilla)
     {
@@ -58,12 +58,11 @@ public static class ScintillaExtensions
         // Set keywords for autocomplete (optional)
         scintilla.SetKeywords(0, string.Join(" ", Keywords));
         scintilla.SetKeywords(1, string.Join(" ", Types));
-
     }
 
-    private static void OnCharAdded(object sender, CharAddedEventArgs e)
+    private static void OnCharAdded(object? sender, CharAddedEventArgs e)
     {
-        var scintilla = (Scintilla)sender;
+        var scintilla = (Scintilla)sender!;
 
         // Auto-close brackets, braces, quotes
         var closingChar = e.Char switch
@@ -99,6 +98,6 @@ public static class ScintillaExtensions
 
     public static string GetTextSafe(this Scintilla scintilla)
     {
-        return scintilla.InvokeRequired ? scintilla.Invoke((() => scintilla.GetTextRange(0, scintilla.TextLength))) : scintilla.GetTextRange(0, scintilla.TextLength);
+        return scintilla.InvokeRequired ? scintilla.Invoke(() => scintilla.GetTextRange(0, scintilla.TextLength)) : scintilla.GetTextRange(0, scintilla.TextLength);
     }
 }

@@ -9,7 +9,7 @@ public static class HexBoxExtensions
         long start = hexView.SelectionStart;
         long length = hexView.SelectionLength;
 
-        if (length == 0) return Array.Empty<byte>();
+        if (length == 0) return [];
 
         byte[] buffer = new byte[8];
 
