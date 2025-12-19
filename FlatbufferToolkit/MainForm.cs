@@ -10,7 +10,7 @@ namespace FlatbufferToolkit;
 
 public partial class MainForm : Form
 {
-    private byte[] fileBytes;
+    private byte[] fileBytes { get; set; } = [];
     private Dictionary<string, DataGridViewRow> dataInspRowLut = [];
 
     public MainForm()
@@ -24,11 +24,13 @@ public partial class MainForm : Form
     private void CreateTemplateSchema(string defaultName)
     {
         const string defaultSchema =
-            "table {0}\n" +
-            "{{\n" +
-            "\n" +
-            "}}\n" +
-            "root_type {0};";
+            """
+            table {0}
+            {{
+
+            }}
+            root_type {0};
+            """;
         schemaText.Text = string.Format(defaultSchema, defaultName);
     }
 
@@ -184,39 +186,19 @@ public partial class MainForm : Form
         LoadFile(ofd.FileName);
     }
 
-    private void MainForm_Load(object sender, EventArgs e)
-    {
-        Logger.Initialize(ref outTxt);
-    }
+    private void MainForm_Load(object sender, EventArgs e) => Logger.Initialize(outTxt);
 
-    private void saveSchemaAsToolStripMenuItem_Click(object sender, EventArgs e)
-    {
-        SaveSchema();
-    }
+    private void saveSchemaAsToolStripMenuItem_Click(object sender, EventArgs e) => SaveSchema();
 
-    private void hexView_MouseUp(object sender, MouseEventArgs e)
-    {
-        UpdateSelectedHex();
-    }
+    private void hexView_MouseUp(object sender, MouseEventArgs e) => UpdateSelectedHex();
 
-    private void dataInspectorToolStripMenuItem_Click(object sender, EventArgs e)
-    {
-        UpdateDataInspectorSettings();
-    }
+    private void dataInspectorToolStripMenuItem_Click(object sender, EventArgs e) => UpdateDataInspectorSettings();
 
-    private void showLineNumbersToolStripMenuItem_Click(object sender, EventArgs e)
-    {
-        UpdateIDESettings();
-    }
+    private void showLineNumbersToolStripMenuItem_Click(object sender, EventArgs e) => UpdateIDESettings();
 
-    private void schemaText_UpdateUI(object sender, UpdateUIEventArgs e)
-    {
-        textLbl.Text = $"Text: Line {schemaText.CurrentLine + 1}";
-    }
+    private void schemaText_UpdateUI(object sender, UpdateUIEventArgs e) => textLbl.Text = $"Text: Line {schemaText.CurrentLine + 1}";
 
-    private void runToolStripMenuItem_Click(object sender, EventArgs e)
-    {
-        ParseSchema();
-    }
+    private void runToolStripMenuItem_Click(object sender, EventArgs e) => ParseSchema();
+
     #endregion
 }

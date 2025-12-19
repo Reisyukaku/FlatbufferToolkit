@@ -422,7 +422,6 @@ namespace FlatbufferToolkit
         private TreeView treeView;
         private SplitContainer splitContainer1;
         private SplitContainer splitContainer2;
-        private Button button1;
         private RichTextBox outTxt;
         private ToolStripMenuItem saveSchemaAsToolStripMenuItem;
         private Label hexLbl;
