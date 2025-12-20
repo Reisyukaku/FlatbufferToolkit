@@ -22,42 +22,56 @@ public static class ScintillaExtensions
     public static void InitFbsLexer(this Scintilla scintilla)
     {
         scintilla.LexerName = "cpp";
+        var styles = scintilla.Styles;
+
+        // Scintilla uses its own styling system; WinForms BackColor/ForeColor alone won't
+        // affect the editor surface. Configure STYLE_DEFAULT then clear all styles.
+        var editorBackColor = Application.IsDarkModeEnabled ? SystemColors.ControlLight : SystemColors.ControlLightLight;
+        var editorForeColor = SystemColors.ControlText;
 
         // Reset all styles
         scintilla.StyleResetDefault();
-        scintilla.Styles[NativeMethods.SCE_C_DEFAULT].Font = "Consolas";
-        scintilla.Styles[NativeMethods.SCE_C_DEFAULT].Size = 12;
+        styles[Style.Default].BackColor = editorBackColor;
+        styles[Style.Default].ForeColor = editorForeColor;
+        styles[Style.Default].Font = "Consolas";
+        styles[Style.Default].Size = 12;
         scintilla.StyleClearAll();
 
         // Configure styles
-        scintilla.Styles[NativeMethods.SCE_C_DEFAULT].ForeColor = Color.Black;
+        styles[NativeMethods.SCE_C_COMMENT].ForeColor = Application.IsDarkModeEnabled ? Color.LightGreen : Color.Green;
+        styles[NativeMethods.SCE_C_COMMENT].Italic = true;
 
-        scintilla.Styles[NativeMethods.SCE_C_COMMENT].ForeColor = Color.Green;
-        scintilla.Styles[NativeMethods.SCE_C_COMMENT].Italic = true;
+        styles[NativeMethods.SCE_C_COMMENTLINE].ForeColor = Application.IsDarkModeEnabled ? Color.LightGreen : Color.Green;
+        styles[NativeMethods.SCE_C_COMMENTLINE].Italic = true;
 
-        scintilla.Styles[NativeMethods.SCE_C_COMMENTLINE].ForeColor = Color.Green;
-        scintilla.Styles[NativeMethods.SCE_C_COMMENTLINE].Italic = true;
+        styles[NativeMethods.SCE_C_WORD].ForeColor = Application.IsDarkModeEnabled ? Color.LightBlue : Color.Blue;
+        styles[NativeMethods.SCE_C_WORD].Bold = true;
 
-        scintilla.Styles[NativeMethods.SCE_C_WORD].ForeColor = Color.Blue;
-        scintilla.Styles[NativeMethods.SCE_C_WORD].Bold = true;
+        styles[NativeMethods.SCE_C_WORD2].ForeColor = Application.IsDarkModeEnabled ? Color.Cyan : Color.DarkCyan;
+        styles[NativeMethods.SCE_C_WORD2].Bold = true;
 
-        scintilla.Styles[NativeMethods.SCE_C_WORD2].ForeColor = Color.DarkCyan;
-        scintilla.Styles[NativeMethods.SCE_C_WORD2].Bold = true;
+        styles[NativeMethods.SCE_C_STRING].ForeColor = Application.IsDarkModeEnabled ? Color.RosyBrown : Color.Brown;
 
-        scintilla.Styles[NativeMethods.SCE_C_STRING].ForeColor = Color.Brown;
+        styles[NativeMethods.SCE_C_NUMBER].ForeColor = Application.IsDarkModeEnabled ? Color.Coral : Color.Red;
 
-        scintilla.Styles[NativeMethods.SCE_C_NUMBER].ForeColor = Color.Red;
+        styles[NativeMethods.SCE_C_OPERATOR].ForeColor = Color.Gray;
+        styles[NativeMethods.SCE_C_OPERATOR].Bold = true;
 
-        scintilla.Styles[NativeMethods.SCE_C_OPERATOR].ForeColor = Color.DarkGray;
-        scintilla.Styles[NativeMethods.SCE_C_OPERATOR].Bold = true;
-
-        scintilla.Styles[NativeMethods.SCE_C_IDENTIFIER].ForeColor = Color.Black;
-
-        scintilla.Styles[NativeMethods.SCE_C_PREPROCESSOR].ForeColor = Color.DarkMagenta;
+        styles[NativeMethods.SCE_C_PREPROCESSOR].ForeColor = Application.IsDarkModeEnabled ? Color.MediumPurple : Color.DarkMagenta;
 
         // Set keywords for autocomplete (optional)
         scintilla.SetKeywords(0, string.Join(" ", Keywords));
         scintilla.SetKeywords(1, string.Join(" ", Types));
+        styles[Style.LineNumber].Font = "Consolas";
+        styles[Style.LineNumber].Size = 8;
+        if (Application.IsDarkModeEnabled)
+        {
+            scintilla.CaretForeColor = editorForeColor;
+            scintilla.SelectionBackColor = SystemColors.Highlight;
+            scintilla.SelectionTextColor = SystemColors.HighlightText;
+            styles[Style.LineNumber].ForeColor = Color.Gray;
+            styles[Style.LineNumber].BackColor = SystemColors.ControlDark;
+        }
     }
 
     private static void OnCharAdded(object? sender, CharAddedEventArgs e)

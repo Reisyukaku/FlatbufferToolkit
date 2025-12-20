@@ -16,6 +16,7 @@ public partial class MainForm : Form
     public MainForm()
     {
         InitializeComponent();
+
         InitDataInspector();
         InitIDE();
         Progress.Initialize(progressBar1, progressLbl);
@@ -60,7 +61,18 @@ public partial class MainForm : Form
         }
 
         var binread = new FlatBufferBinWalk(hexView, treeView, fileBytes, schema);
-        var fbs = await Task.Run(() => binread.ReadRoot());
+        var fbs = await Task.Run(() =>
+        {
+            try
+            {
+                return binread.ReadRoot();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error reading FlatBuffer: {ex.Message}");
+                return null;
+            }
+        });
 
         if (fbs == null) goto end;
 
@@ -77,11 +89,12 @@ public partial class MainForm : Form
     #region UI_INIT
     private void InitDataInspector()
     {
-        var AddRow = (string name, object value) =>
+        void AddRow(string name, object value)
         {
             int rowIndex = dataInspectorGrid.Rows.Add(name, value);
             dataInspRowLut[name] = dataInspectorGrid.Rows[rowIndex];
-        };
+        }
+
         AddRow("U8", 0);
         AddRow("S8", 0);
         AddRow("U16", 0);
@@ -170,7 +183,7 @@ public partial class MainForm : Form
 
     private void SaveSchema()
     {
-        var sfd = new SaveFileDialog();
+        using var sfd = new SaveFileDialog();
         sfd.Filter = "Flatbuffer Schema|*.fbs|All files|*.*";
         if (sfd.ShowDialog() != DialogResult.OK) return;
 
@@ -181,7 +194,9 @@ public partial class MainForm : Form
     #region UI_CALLBACKS
     private void openToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        var ofd = new OpenFileDialog();
+        using var ofd = new OpenFileDialog();
+        ofd.Title = "Open Flatbuffer Binary File";
+        ofd.Filter = "All files|*.*";
         if (ofd.ShowDialog() != DialogResult.OK) return;
         LoadFile(ofd.FileName);
     }

@@ -8,6 +8,9 @@ internal static class Program
     [STAThread]
     private static void Main()
     {
+        var args = Environment.GetCommandLineArgs();
+        if (args.Any(z => z.EndsWith("-dark")))
+            Application.SetColorMode(SystemColorMode.Dark);
         ApplicationConfiguration.Initialize();
         Application.Run(new MainForm());
     }
