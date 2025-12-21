@@ -26,6 +26,7 @@ public class FlatBufferBinWalk
         Progress.Instance.Setup(_bufferSize, "Parsing binary");
         if (_schema.RootType == null)
             throw new Exception("No root_type specified in schema");
+
         Dictionary<string, object>? root;
         try
         {
@@ -261,6 +262,7 @@ public class FlatBufferBinWalk
             BaseType.UByte or BaseType.UShort or BaseType.UInt or BaseType.ULong => 0UL,
             BaseType.Float => 0.0f,
             BaseType.Double => 0.0,
+            BaseType.String => string.Empty,
             _ => throw new Exception("No default value for this type"),
         };
     }

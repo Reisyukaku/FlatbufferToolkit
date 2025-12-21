@@ -83,7 +83,7 @@ namespace FlatbufferToolkit
             menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem, runToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(1258, 25);
+            menuStrip1.Size = new Size(1258, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -91,20 +91,20 @@ namespace FlatbufferToolkit
             // 
             fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveSchemaAsToolStripMenuItem });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            fileToolStripMenuItem.Size = new Size(39, 21);
+            fileToolStripMenuItem.Size = new Size(37, 20);
             fileToolStripMenuItem.Text = "File";
             // 
             // openToolStripMenuItem
             // 
             openToolStripMenuItem.Name = "openToolStripMenuItem";
-            openToolStripMenuItem.Size = new Size(152, 22);
+            openToolStripMenuItem.Size = new Size(143, 22);
             openToolStripMenuItem.Text = "Open";
             openToolStripMenuItem.Click += openToolStripMenuItem_Click;
             // 
             // saveSchemaAsToolStripMenuItem
             // 
             saveSchemaAsToolStripMenuItem.Name = "saveSchemaAsToolStripMenuItem";
-            saveSchemaAsToolStripMenuItem.Size = new Size(152, 22);
+            saveSchemaAsToolStripMenuItem.Size = new Size(143, 22);
             saveSchemaAsToolStripMenuItem.Text = "Save Schema";
             saveSchemaAsToolStripMenuItem.Click += saveSchemaAsToolStripMenuItem_Click;
             // 
@@ -112,14 +112,14 @@ namespace FlatbufferToolkit
             // 
             viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { dataInspectorToolStripMenuItem, iDEToolStripMenuItem });
             viewToolStripMenuItem.Name = "viewToolStripMenuItem";
-            viewToolStripMenuItem.Size = new Size(47, 21);
+            viewToolStripMenuItem.Size = new Size(44, 20);
             viewToolStripMenuItem.Text = "View";
             // 
             // dataInspectorToolStripMenuItem
             // 
             dataInspectorToolStripMenuItem.CheckOnClick = true;
             dataInspectorToolStripMenuItem.Name = "dataInspectorToolStripMenuItem";
-            dataInspectorToolStripMenuItem.Size = new Size(161, 22);
+            dataInspectorToolStripMenuItem.Size = new Size(150, 22);
             dataInspectorToolStripMenuItem.Text = "Data Inspector";
             dataInspectorToolStripMenuItem.Click += dataInspectorToolStripMenuItem_Click;
             // 
@@ -127,7 +127,7 @@ namespace FlatbufferToolkit
             // 
             iDEToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { showLineNumbersToolStripMenuItem });
             iDEToolStripMenuItem.Name = "iDEToolStripMenuItem";
-            iDEToolStripMenuItem.Size = new Size(161, 22);
+            iDEToolStripMenuItem.Size = new Size(150, 22);
             iDEToolStripMenuItem.Text = "IDE";
             // 
             // showLineNumbersToolStripMenuItem
@@ -136,14 +136,14 @@ namespace FlatbufferToolkit
             showLineNumbersToolStripMenuItem.CheckOnClick = true;
             showLineNumbersToolStripMenuItem.CheckState = CheckState.Checked;
             showLineNumbersToolStripMenuItem.Name = "showLineNumbersToolStripMenuItem";
-            showLineNumbersToolStripMenuItem.Size = new Size(192, 22);
+            showLineNumbersToolStripMenuItem.Size = new Size(180, 22);
             showLineNumbersToolStripMenuItem.Text = "Show Line Numbers";
             showLineNumbersToolStripMenuItem.Click += showLineNumbersToolStripMenuItem_Click;
             // 
             // runToolStripMenuItem
             // 
             runToolStripMenuItem.Name = "runToolStripMenuItem";
-            runToolStripMenuItem.Size = new Size(42, 21);
+            runToolStripMenuItem.Size = new Size(40, 20);
             runToolStripMenuItem.Text = "Run";
             runToolStripMenuItem.Click += runToolStripMenuItem_Click;
             // 
@@ -163,7 +163,7 @@ namespace FlatbufferToolkit
             hexView.SelectionBackColor = SystemColors.Highlight;
             hexView.SelectionForeColor = SystemColors.HighlightText;
             hexView.ShadowSelectionColor = Color.FromArgb(100, 60, 188, 255);
-            hexView.Size = new Size(650, 310);
+            hexView.Size = new Size(650, 273);
             hexView.StringViewVisible = true;
             hexView.TabIndex = 0;
             hexView.VScrollBarVisible = true;
@@ -176,9 +176,9 @@ namespace FlatbufferToolkit
             schemaText.Dock = DockStyle.Fill;
             schemaText.LexerName = null;
             schemaText.Location = new Point(0, 0);
-            schemaText.Margin = new Padding(2, 2, 2, 2);
+            schemaText.Margin = new Padding(2);
             schemaText.Name = "schemaText";
-            schemaText.Size = new Size(324, 567);
+            schemaText.Size = new Size(324, 500);
             schemaText.TabIndex = 1;
             schemaText.UpdateUI += schemaText_UpdateUI;
             // 
@@ -189,7 +189,7 @@ namespace FlatbufferToolkit
             treeView.Location = new Point(0, 0);
             treeView.Name = "treeView";
             treeView.ShowNodeToolTips = true;
-            treeView.Size = new Size(650, 252);
+            treeView.Size = new Size(650, 223);
             treeView.TabIndex = 2;
             // 
             // splitContainer1
@@ -207,7 +207,7 @@ namespace FlatbufferToolkit
             // splitContainer1.Panel2
             // 
             splitContainer1.Panel2.Controls.Add(schemaText);
-            splitContainer1.Size = new Size(978, 567);
+            splitContainer1.Size = new Size(978, 500);
             splitContainer1.SplitterDistance = 650;
             splitContainer1.TabIndex = 3;
             // 
@@ -225,20 +225,19 @@ namespace FlatbufferToolkit
             // splitContainer2.Panel2
             // 
             splitContainer2.Panel2.Controls.Add(treeView);
-            splitContainer2.Size = new Size(650, 567);
-            splitContainer2.SplitterDistance = 310;
-            splitContainer2.SplitterWidth = 5;
+            splitContainer2.Size = new Size(650, 500);
+            splitContainer2.SplitterDistance = 273;
             splitContainer2.TabIndex = 0;
             // 
             // outTxt
             // 
             outTxt.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             outTxt.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            outTxt.Location = new Point(8, 605);
+            outTxt.Location = new Point(8, 534);
             outTxt.Name = "outTxt";
             outTxt.ReadOnly = true;
             outTxt.ScrollBars = RichTextBoxScrollBars.Vertical;
-            outTxt.Size = new Size(1243, 137);
+            outTxt.Size = new Size(1243, 121);
             outTxt.TabIndex = 5;
             outTxt.Text = "";
             // 
@@ -246,10 +245,10 @@ namespace FlatbufferToolkit
             // 
             hexLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             hexLbl.AutoSize = true;
-            hexLbl.Location = new Point(12, 748);
-            hexLbl.Margin = new Padding(3, 3, 3, 3);
+            hexLbl.Location = new Point(12, 660);
+            hexLbl.Margin = new Padding(3);
             hexLbl.Name = "hexLbl";
-            hexLbl.Size = new Size(33, 17);
+            hexLbl.Size = new Size(31, 15);
             hexLbl.TabIndex = 6;
             hexLbl.Text = "Hex:";
             // 
@@ -259,7 +258,7 @@ namespace FlatbufferToolkit
             dataInspector.Dock = DockStyle.Top;
             dataInspector.Location = new Point(0, 0);
             dataInspector.Name = "dataInspector";
-            dataInspector.Size = new Size(252, 314);
+            dataInspector.Size = new Size(252, 277);
             dataInspector.TabIndex = 7;
             dataInspector.TabStop = false;
             dataInspector.Text = "Data Inspector";
@@ -294,7 +293,7 @@ namespace FlatbufferToolkit
             dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
             dataInspectorGrid.DefaultCellStyle = dataGridViewCellStyle2;
             dataInspectorGrid.Dock = DockStyle.Fill;
-            dataInspectorGrid.Location = new Point(3, 21);
+            dataInspectorGrid.Location = new Point(3, 19);
             dataInspectorGrid.Margin = new Padding(0);
             dataInspectorGrid.Name = "dataInspectorGrid";
             dataInspectorGrid.ReadOnly = true;
@@ -309,7 +308,7 @@ namespace FlatbufferToolkit
             dataInspectorGrid.RowHeadersVisible = false;
             dataInspectorGrid.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.AutoSizeToAllHeaders;
             dataInspectorGrid.ScrollBars = ScrollBars.None;
-            dataInspectorGrid.Size = new Size(246, 290);
+            dataInspectorGrid.Size = new Size(246, 255);
             dataInspectorGrid.TabIndex = 0;
             // 
             // Unit
@@ -335,11 +334,11 @@ namespace FlatbufferToolkit
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.Controls.Add(splitContainer1, 0, 0);
             tableLayoutPanel1.Controls.Add(dataInspectorPanel, 1, 0);
-            tableLayoutPanel1.Location = new Point(8, 27);
+            tableLayoutPanel1.Location = new Point(8, 24);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 1;
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableLayoutPanel1.Size = new Size(1242, 573);
+            tableLayoutPanel1.Size = new Size(1242, 506);
             tableLayoutPanel1.TabIndex = 8;
             // 
             // dataInspectorPanel
@@ -349,15 +348,15 @@ namespace FlatbufferToolkit
             dataInspectorPanel.Dock = DockStyle.Fill;
             dataInspectorPanel.Location = new Point(987, 3);
             dataInspectorPanel.Name = "dataInspectorPanel";
-            dataInspectorPanel.Size = new Size(252, 567);
+            dataInspectorPanel.Size = new Size(252, 500);
             dataInspectorPanel.TabIndex = 4;
             // 
             // dataInspectorSettings
             // 
             dataInspectorSettings.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            dataInspectorSettings.Location = new Point(0, 318);
+            dataInspectorSettings.Location = new Point(0, 281);
             dataInspectorSettings.Name = "dataInspectorSettings";
-            dataInspectorSettings.Size = new Size(252, 250);
+            dataInspectorSettings.Size = new Size(252, 221);
             dataInspectorSettings.TabIndex = 8;
             dataInspectorSettings.TabStop = false;
             dataInspectorSettings.Text = "Settings";
@@ -366,38 +365,38 @@ namespace FlatbufferToolkit
             // 
             textLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             textLbl.AutoSize = true;
-            textLbl.Location = new Point(235, 748);
-            textLbl.Margin = new Padding(3, 3, 3, 3);
+            textLbl.Location = new Point(235, 660);
+            textLbl.Margin = new Padding(3);
             textLbl.Name = "textLbl";
-            textLbl.Size = new Size(34, 17);
+            textLbl.Size = new Size(31, 15);
             textLbl.TabIndex = 9;
             textLbl.Text = "Text:";
             // 
             // progressBar1
             // 
             progressBar1.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            progressBar1.Location = new Point(1124, 748);
+            progressBar1.Location = new Point(1124, 660);
             progressBar1.Name = "progressBar1";
-            progressBar1.Size = new Size(126, 17);
+            progressBar1.Size = new Size(126, 15);
             progressBar1.TabIndex = 10;
             // 
             // progressLbl
             // 
             progressLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            progressLbl.Location = new Point(917, 748);
-            progressLbl.Margin = new Padding(3, 3, 3, 3);
+            progressLbl.Location = new Point(917, 660);
+            progressLbl.Margin = new Padding(3);
             progressLbl.Name = "progressLbl";
             progressLbl.RightToLeft = RightToLeft.No;
-            progressLbl.Size = new Size(201, 17);
+            progressLbl.Size = new Size(201, 15);
             progressLbl.TabIndex = 11;
             progressLbl.Text = "Ready";
             progressLbl.TextAlign = ContentAlignment.TopRight;
             // 
             // MainForm
             // 
-            AutoScaleDimensions = new SizeF(7F, 17F);
+            AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1258, 774);
+            ClientSize = new Size(1258, 683);
             Controls.Add(progressLbl);
             Controls.Add(progressBar1);
             Controls.Add(textLbl);
@@ -406,7 +405,7 @@ namespace FlatbufferToolkit
             Controls.Add(outTxt);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
-            MinimumSize = new Size(515, 284);
+            MinimumSize = new Size(515, 255);
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Flatbuffer Toolkit";

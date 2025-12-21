@@ -78,7 +78,19 @@ public static class ScintillaExtensions
     {
         var scintilla = (Scintilla)sender!;
 
-        // Auto-close brackets, braces, quotes
+        //Smart return
+        if (e.Char == '\n' || e.Char == '\r')
+        {
+            var currentLine = scintilla.CurrentLine;
+            if (currentLine > 0)
+            {
+                scintilla.Lines[currentLine].Indentation = scintilla.Lines[currentLine - 1].Indentation;
+                scintilla.GotoPosition(scintilla.Lines[currentLine].IndentPosition);
+            }
+            return;
+        }
+
+        //Auto-close brackets, braces, quotes
         var closingChar = e.Char switch
         {
             '{' => '}',
@@ -94,8 +106,6 @@ public static class ScintillaExtensions
             var currentPos = scintilla.CurrentPosition;
             scintilla.InsertText(currentPos, closingChar.ToString());
             scintilla.CurrentPosition = currentPos;
-            scintilla.SelectionStart = currentPos;
-            scintilla.SelectionEnd = currentPos;
         }
     }
 
