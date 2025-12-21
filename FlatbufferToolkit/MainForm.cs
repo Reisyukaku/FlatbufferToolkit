@@ -5,6 +5,7 @@ using FlatbufferToolkit.UI.IDE;
 using FlatbufferToolkit.Utils;
 using ScintillaNET;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace FlatbufferToolkit;
 
@@ -82,7 +83,7 @@ public partial class MainForm : Form
         }
         hexView.Invalidate(true);
 
-        end:
+    end:
         UIEnabled(true);
     }
 
@@ -150,7 +151,10 @@ public partial class MainForm : Form
         var start = hexView.SelectionStart;
         var length = hexView.SelectionLength;
         hexLbl.Text = $"Hex: 0x{start:X} | 0x{length:X} bytes";
+    }
 
+    private void UpdateDataInspector()
+    {
         byte[] val = hexView.GetSelectedBytes();
         if (val.Length == 0) return;
 
@@ -201,11 +205,28 @@ public partial class MainForm : Form
         LoadFile(ofd.FileName);
     }
 
+    private void MainForm_DragDrop(object sender, DragEventArgs e)
+    {
+        string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+        if (files != null && files.Length > 0)
+            LoadFile(files[0]);
+    }
+
+    private void MainForm_DragEnter(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            e.Effect = DragDropEffects.Copy;
+        else
+            e.Effect = DragDropEffects.None;
+    }
+
     private void MainForm_Load(object sender, EventArgs e) => Logger.Initialize(outTxt);
 
     private void saveSchemaAsToolStripMenuItem_Click(object sender, EventArgs e) => SaveSchema();
 
-    private void hexView_MouseUp(object sender, MouseEventArgs e) => UpdateSelectedHex();
+    private void hexView_MouseUp(object sender, MouseEventArgs e) => UpdateDataInspector();
+
+    private void hexView_SelectionLengthChanged(object sender, EventArgs e) => UpdateSelectedHex();
 
     private void dataInspectorToolStripMenuItem_Click(object sender, EventArgs e) => UpdateDataInspectorSettings();
 

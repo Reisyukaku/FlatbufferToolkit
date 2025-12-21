@@ -167,6 +167,7 @@ namespace FlatbufferToolkit
             hexView.StringViewVisible = true;
             hexView.TabIndex = 0;
             hexView.VScrollBarVisible = true;
+            hexView.SelectionLengthChanged += hexView_SelectionLengthChanged;
             hexView.MouseUp += hexView_MouseUp;
             // 
             // schemaText
@@ -394,6 +395,7 @@ namespace FlatbufferToolkit
             // 
             // MainForm
             // 
+            AllowDrop = true;
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1258, 683);
@@ -410,6 +412,8 @@ namespace FlatbufferToolkit
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Flatbuffer Toolkit";
             Load += MainForm_Load;
+            DragDrop += MainForm_DragDrop;
+            DragEnter += MainForm_DragEnter;
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             splitContainer1.Panel1.ResumeLayout(false);
