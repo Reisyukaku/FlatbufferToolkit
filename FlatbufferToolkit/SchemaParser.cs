@@ -1,4 +1,4 @@
-﻿using FlatbufferToolkit.UI;
+using FlatbufferToolkit.UI;
 using FlatbufferToolkit.UI.IDE;
 using FlatbufferToolkit.Utils;
 using ScintillaNET;
@@ -113,6 +113,44 @@ public class SchemaParser
             {
                 ParseTopLevel();
             }
+
+            foreach (var structDef in _schema.Structs.Values)
+            {
+                foreach (var field in structDef.Fields)
+                {
+                    if (field.Type.BaseType == BaseType.Obj)
+                    {
+                        var eDef = _schema.Enums.Values.FirstOrDefault(e => e.Name == field.Type.StructName || e.Name.EndsWith("." + field.Type.StructName));
+                        if (eDef != null)
+                        {
+                            field.Type.BaseType = eDef.UnderlyingType;
+                            field.Type.EnumName = eDef.Name;
+                            field.Type.StructName = null;
+                        }
+                    }
+                    else if (field.Type.BaseType == BaseType.Vector && field.Type.ElementType == BaseType.Obj)
+                    {
+                        var eDef = _schema.Enums.Values.FirstOrDefault(e => e.Name == field.Type.StructName || e.Name.EndsWith("." + field.Type.StructName));
+                        if (eDef != null)
+                        {
+                            field.Type.ElementType = eDef.UnderlyingType;
+                            field.Type.EnumName = eDef.Name;
+                            field.Type.StructName = null;
+                        }
+                    }
+                    else if (field.Type.BaseType == BaseType.Array && field.Type.ElementType == BaseType.Obj)
+                    {
+                        var eDef = _schema.Enums.Values.FirstOrDefault(e => e.Name == field.Type.StructName || e.Name.EndsWith("." + field.Type.StructName));
+                        if (eDef != null)
+                        {
+                            field.Type.ElementType = eDef.UnderlyingType;
+                            field.Type.EnumName = eDef.Name;
+                            field.Type.StructName = null;
+                        }
+                    }
+                }
+            }
+
             Progress.Instance.SetProgress(fbsContent.Lines.Count, "Done");
             return _schema;
         }
@@ -232,6 +270,7 @@ public class SchemaParser
 
             field.Type = ParseType();
 
+            SkipWhitespaceAndComments();
             // Default value
             if (Peek() == '=')
             {
@@ -337,6 +376,7 @@ public class SchemaParser
             Next();
             var elementType = ParseType();
 
+            SkipWhitespaceAndComments();
             if (Peek() == ':')
             {
                 Next();
@@ -395,6 +435,7 @@ public class SchemaParser
 
     private void ParseMetadata(Dictionary<string, string> attrs)
     {
+        SkipWhitespaceAndComments();
         if (Peek() == '(')
         {
             Next();

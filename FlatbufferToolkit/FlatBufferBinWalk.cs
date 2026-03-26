@@ -1,4 +1,4 @@
-﻿using Be.Windows.Forms;
+using Be.Windows.Forms;
 using FlatbufferToolkit.UI;
 using FlatbufferToolkit.UI.Nodes;
 using FlatbufferToolkit.Utils;
@@ -12,6 +12,28 @@ public class FlatBufferBinWalk
     private readonly Schema _schema;
     private readonly TreeView _treeView;
     private readonly int _bufferSize;
+    private readonly Dictionary<string, StructDef> _structDefCache = new();
+    private readonly Dictionary<string, EnumDef> _enumDefCache = new();
+
+    private EnumDef? GetEnumDef(string enumName)
+    {
+        if (string.IsNullOrEmpty(enumName)) return null;
+        if (_enumDefCache.TryGetValue(enumName, out var def)) return def;
+        
+        def = _schema.Enums.Values.FirstOrDefault(e => e.Name == enumName || e.Name.EndsWith("." + enumName));
+        if (def != null) _enumDefCache[enumName] = def;
+        return def;
+    }
+
+    private StructDef? GetStructDef(string structName)
+    {
+        if (string.IsNullOrEmpty(structName)) return null;
+        if (_structDefCache.TryGetValue(structName, out var def)) return def;
+        
+        def = _schema.Structs.Values.FirstOrDefault(s => s.Name == structName || s.Name.EndsWith("." + structName));
+        if (def != null) _structDefCache[structName] = def;
+        return def;
+    }
 
     public FlatBufferBinWalk(HexBox viewer, TreeView treeView, byte[] buffer, Schema schema)
     {
@@ -77,7 +99,7 @@ public class FlatBufferBinWalk
 
             TreeNode elem = new TreeNode
             {
-                ToolTipText = $"Addr: 0x{offset:X4}"
+                ToolTipText = $"Addr: 0x{offset + fieldOffset:X4}"
             };
 
             result[field.Name] = ReadFieldAt(field, offset + fieldOffset, elem);
@@ -95,7 +117,6 @@ public class FlatBufferBinWalk
         var pos = offset;
         foreach (var field in structDef.Fields)
         {
-            Seek(pos);
             if (field.Deprecated) continue;
 
             TreeNode elem = new TreeNode
@@ -107,7 +128,7 @@ public class FlatBufferBinWalk
 
             thisNode.Nodes.Add(elem);
 
-            pos += GetTypeSize(field.Type.ElementType);
+            pos += GetTypeSize(field.Type.BaseType);
         }
 
         return result;
@@ -119,11 +140,9 @@ public class FlatBufferBinWalk
             
         object? val = null;
 
-        node.Text = string.Empty;
-        //Everything that isn't a table/struct/vec should be shown as var:val
-        //Others are var:type, with vals as children
         if (field.Type.IsScalar || field.Type.IsString)
             node.Text = $"{field.Name}:";
+
         switch (field.Type.BaseType)
         {
             case BaseType.Bool: val = _reader.ReadByte() != 0; break;
@@ -137,12 +156,6 @@ public class FlatBufferBinWalk
             case BaseType.ULong: val = _reader.ReadUInt64(); break;
             case BaseType.Float: val = _reader.ReadSingle(); break;
             case BaseType.Double: val = _reader.ReadDouble(); break;
-        }
-        if(val != null)
-            node.Text += val.ToString();
-
-        switch (field.Type.BaseType)
-        {
             case BaseType.String: 
                 val = ReadStringAt(pos);
                 node.Text += $"\"{val}\""; 
@@ -155,7 +168,7 @@ public class FlatBufferBinWalk
             case BaseType.Obj:
                 node.Text = field.Type.StructName;
                 var tableOffset = pos + ReadIntAt(pos);
-                var structDef = _schema.Structs.Values.FirstOrDefault(s => s.Name == field.Type.StructName || s.Name.EndsWith("." + field.Type.StructName));
+                var structDef = GetStructDef(field.Type.StructName);
 
                 if (structDef != null)
                 {
@@ -164,8 +177,27 @@ public class FlatBufferBinWalk
                     else
                         val = ReadTable(structDef, tableOffset, node);
                 }
-
                 break;
+        }
+
+        if (field.Type.IsScalar && val != null)
+        {
+            if (!string.IsNullOrEmpty(field.Type.EnumName))
+            {
+                var enumDef = GetEnumDef(field.Type.EnumName);
+                if (enumDef != null)
+                {
+                    try
+                    {
+                        long longVal = Convert.ToInt64(val);
+                        var ev = enumDef.Values.FirstOrDefault(v => v.Value == longVal);
+                        if (ev != null)
+                            val = ev.Name;
+                    }
+                    catch { }
+                }
+            }
+            node.Text += val.ToString();
         }
 
         ArgumentNullException.ThrowIfNull(val);
@@ -181,6 +213,19 @@ public class FlatBufferBinWalk
         var list = new List<object>();
         var elemSize = GetTypeSize(field.Type.ElementType);
 
+        FieldDef? elemField = null;
+        if (field.Type.ElementType != BaseType.Obj)
+        {
+            elemField = new FieldDef
+            {
+                Type = new FbsType
+                {
+                    BaseType = field.Type.ElementType,
+                    StructName = field.Type.StructName
+                }
+            };
+        }
+
         for (int i = 0; i < length; i++)
         {
             var elemPos = dataOffset + i * elemSize;
@@ -192,7 +237,7 @@ public class FlatBufferBinWalk
             if (field.Type.ElementType == BaseType.Obj)
             {
                 var tableOffset = elemPos + ReadIntAt(elemPos);
-                var structDef = _schema.Structs.Values.FirstOrDefault(s => s.Name == field.Type.StructName || s.Name.EndsWith("." + field.Type.StructName));
+                var structDef = GetStructDef(field.Type.StructName);
                 object? val = null;
                 if (structDef != null)
                 {
@@ -206,15 +251,7 @@ public class FlatBufferBinWalk
             }
             else
             {
-                var elemField = new FieldDef
-                {
-                    Type = new FbsType
-                    {
-                        BaseType = field.Type.ElementType,
-                        StructName = field.Type.StructName
-                    }
-                };
-                list.Add(ReadFieldAt(elemField, elemPos, child));
+                list.Add(ReadFieldAt(elemField!, elemPos, child));
             }
             thisNode.Nodes.Add(child);
         }
@@ -236,22 +273,12 @@ public class FlatBufferBinWalk
         {
             switch (field.Type.BaseType)
             {
-                case BaseType.Bool:
-                    return field.DefaultValue != "0";
-                case BaseType.Byte:
-                case BaseType.Short:
-                case BaseType.Int:
-                case BaseType.Long:
-                    return long.Parse(field.DefaultValue);
-                case BaseType.UByte:
-                case BaseType.UShort:
-                case BaseType.UInt:
-                case BaseType.ULong:
-                    return ulong.Parse(field.DefaultValue);
-                case BaseType.Float:
-                    return float.Parse(field.DefaultValue);
-                case BaseType.Double:
-                    return double.Parse(field.DefaultValue);
+                case BaseType.Bool: return field.DefaultValue != "0";
+                case BaseType.Byte: case BaseType.Short: case BaseType.Int: case BaseType.Long: return long.Parse(field.DefaultValue);
+                case BaseType.UByte: case BaseType.UShort: case BaseType.UInt: case BaseType.ULong: return ulong.Parse(field.DefaultValue);
+                case BaseType.Float: return float.Parse(field.DefaultValue);
+                case BaseType.Double: return double.Parse(field.DefaultValue);
+                case BaseType.String: return field.DefaultValue;
             }
         }
 
