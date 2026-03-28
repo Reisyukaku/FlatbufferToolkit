@@ -204,6 +204,7 @@ namespace FlatbufferToolkit
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Flatbuffer Toolkit";
             Load += MainForm_Load;
+            Shown += MainForm_Shown;
             DragDrop += MainForm_DragDrop;
             DragEnter += MainForm_DragEnter;
             menuStrip1.ResumeLayout(false);

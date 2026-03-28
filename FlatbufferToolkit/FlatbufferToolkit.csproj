@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="Be.Windows.Forms.HexBox.Net8" Version="2.1.0" />
-    <PackageReference Include="Scintilla5.NET" Version="6.1.1" />
+    <PackageReference Include="Scintilla5.NET" Version="6.1.2" />
   </ItemGroup>
 
 </Project>

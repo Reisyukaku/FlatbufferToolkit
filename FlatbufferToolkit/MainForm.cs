@@ -1,4 +1,5 @@
 using Be.Windows.Forms;
+using FlatbufferToolkit.MCP;
 using FlatbufferToolkit.UI;
 using FlatbufferToolkit.UI.HexView;
 using FlatbufferToolkit.UI.IDE;
@@ -15,7 +16,6 @@ public partial class MainForm : Form
     public MainForm()
     {
         InitializeComponent();
-
         Progress.Initialize(progressBar1, progressLbl);
     }
 
@@ -39,6 +39,32 @@ public partial class MainForm : Form
         tab.Controls.Add(editor);
         tabCtrl.TabPages.Add(tab);
         tabCtrl.SelectedIndex = tabCtrl.TabCount - 1;
+        UpdateMcpProviders();
+    }
+
+    private void UpdateMcpProviders()
+    {
+        var tab = GetCurrentTab();
+        if (tab == null)
+        {
+            McpToolManager.Instance.ReadHexProvider = null;
+            McpToolManager.Instance.ReadSchemaProvider = null;
+            McpToolManager.Instance.WriteSchemaProvider = null;
+            return;
+        }
+
+        McpToolManager.Instance.ReadHexProvider = (offset, length) =>
+        {
+            return (string)Invoke(new Func<string>(() => tab.ReadHex(offset, length)));
+        };
+        McpToolManager.Instance.ReadSchemaProvider = () =>
+        {
+            return (string)Invoke(new Func<string>(() => tab.ReadSchema()));
+        };
+        McpToolManager.Instance.WriteSchemaProvider = (text) =>
+        {
+            Invoke(new Action(() => tab.WriteSchema(text)));
+        };
     }
 
     private void UpdateHexLabel()
@@ -87,29 +113,37 @@ public partial class MainForm : Form
     private void Editor_RequestNewFile(object sender, FileAccessor e) => CreateNew(e);
     private void tabCtrl_SelectedIndexChanged(object sender, EventArgs e)
     {
-        GetCurrentTab().UpdateSettings();
+        GetCurrentTab()?.UpdateSettings();
         UpdateHexLabel();
+        UpdateMcpProviders();
     }
 
     private void dataInspectorToolStripMenuItem_Click(object sender, EventArgs e)
     {
         Settings.Instance.ShowDataInspector = dataInspectorToolStripMenuItem.Checked;
-        GetCurrentTab().UpdateSettings();
+        GetCurrentTab()?.UpdateSettings();
     }
 
     private void showLineNumbersToolStripMenuItem_Click(object sender, EventArgs e)
     {
         Settings.Instance.ShowTextNumbers = showLineNumbersToolStripMenuItem.Checked;
-        GetCurrentTab().UpdateSettings();
+        GetCurrentTab()?.UpdateSettings();
     }
 
     private void schemaText_UpdateUI(object sender, UpdateUIEventArgs e) => textLbl.Text = $"Text: Line {GetCurrentTab().GetCurrentTextLine() + 1}";
 
     private void runToolStripMenuItem_Click(object sender, EventArgs e)
     {
-        GetCurrentTab().ParseSchema();
+        GetCurrentTab()?.ParseSchema();
         outTxt.Text = string.Empty;
     }
 
+    private void MainForm_Shown(object sender, EventArgs e)
+    {
+        UpdateMcpProviders();
+        McpServerManager.Instance.Start();
+    }
+
     #endregion
+
 }

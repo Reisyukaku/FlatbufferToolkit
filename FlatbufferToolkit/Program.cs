@@ -1,3 +1,5 @@
+using FlatbufferToolkit.MCP;
+
 namespace FlatbufferToolkit;
 
 internal static class Program

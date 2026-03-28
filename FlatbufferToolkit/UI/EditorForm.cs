@@ -1,4 +1,4 @@
-﻿using Be.Windows.Forms;
+using Be.Windows.Forms;
 using FlatbufferToolkit.UI.HexView;
 using FlatbufferToolkit.UI.IDE;
 using ScintillaNET;
@@ -105,6 +105,24 @@ namespace FlatbufferToolkit.UI
             var length = hexView.SelectionLength;
             return Tuple.Create(start, length);
         }
+
+        public string ReadHex(long offset, int length)
+        {
+            if (_file?.Bytes == null) return string.Empty;
+            if (offset < 0 || offset >= _file.Bytes.Length) return string.Empty;
+            length = (int)Math.Min(length, _file.Bytes.Length - offset);
+            byte[] bytes = new byte[length];
+            Array.Copy(_file.Bytes, offset, bytes, 0, length);
+            
+            hexView.HighlightedRegions.Add(new HexBox.HighlightedRegion((int)offset, length, Color.MediumTurquoise));
+            hexView.HighlightedRegions.Sort((a, b) => a.Start.CompareTo(b.Start));
+            hexView.Invalidate(true);
+            
+            return BitConverter.ToString(bytes).Replace("-", " ");
+        }
+
+        public string ReadSchema() => schemaText.Text;
+        public void WriteSchema(string text) => schemaText.Text = text;
 
         #region FILE_HANDLING
         public void LoadFile(FileAccessor file)
