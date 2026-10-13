@@ -50,6 +50,7 @@ public partial class MainForm : Form
             McpToolManager.Instance.ReadHexProvider = null;
             McpToolManager.Instance.ReadSchemaProvider = null;
             McpToolManager.Instance.WriteSchemaProvider = null;
+            McpToolManager.Instance.BufferSnapshotProvider = null;
             return;
         }
 
@@ -64,6 +65,12 @@ public partial class MainForm : Form
         McpToolManager.Instance.WriteSchemaProvider = (text) =>
         {
             Invoke(new Action(() => tab.WriteSchema(text)));
+        };
+        McpToolManager.Instance.BufferSnapshotProvider = () =>
+        {
+            return (byte[])Invoke(new Func<byte[]>(() =>
+                (GetCurrentTab() ?? throw new InvalidOperationException("No active binary buffer."))
+                    .GetBufferSnapshot()));
         };
     }
 

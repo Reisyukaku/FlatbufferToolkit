@@ -99,6 +99,10 @@ namespace FlatbufferToolkit.UI
 
         public string GetName() => _file.Name;
 
+        public byte[] GetBufferSnapshot() => hexView.ByteProvider is DynamicByteProvider provider
+            ? provider.Bytes.ToArray()
+            : throw new InvalidOperationException("No binary buffer is loaded.");
+
         public Tuple<long, long> GetSelectedHex()
         {
             var start = hexView.SelectionStart;

@@ -53,10 +53,10 @@ public class FlatBufferBinWalk
         try
         {
             var rootStruct = _schema.Structs[_schema.RootType];
-            var rootOffset = ReadIntAt(0);
+            var rootOffset = ReadUIntAt(0);
 
             var rootNode = new TreeNode(_schema.RootType);
-            root = ReadTable(rootStruct, rootOffset, rootNode);
+            root = ReadTable(rootStruct, rootOffset, rootNode, 0);
 
             _treeView.AddNodesToTree(rootNode);
 
@@ -71,7 +71,7 @@ public class FlatBufferBinWalk
         return root;
     }
 
-    private Dictionary<string, object> ReadTable(StructDef structDef, long offset, TreeNode thisNode)
+    private Dictionary<string, object> ReadTable(StructDef structDef, long offset, TreeNode thisNode, long referencePos)
     {
         var result = new Dictionary<string, object>();
 
@@ -80,7 +80,7 @@ public class FlatBufferBinWalk
         var vtableSize = ReadUShortAt(vtableOffset);
         var tblSize = ReadUShortAt(vtableOffset+2);
 
-        thisNode.ToolTipText = $"Addr: 0x{offset:X4} | Elements: {(vtableSize - 4) / 2}";
+        thisNode.ToolTipText = $"Addr: 0x{referencePos:X4} | Table: 0x{offset:X4} | VTable: 0x{vtableOffset:X4} | Elements: {(vtableSize - 4) / 2}";
         foreach (var field in structDef.Fields)
         {
             if (field.Deprecated) continue;
@@ -117,7 +117,13 @@ public class FlatBufferBinWalk
         var pos = offset;
         foreach (var field in structDef.Fields)
         {
-            if (field.Deprecated) continue;
+            var layout = GetInlineLayout(field.Type);
+            pos = offset + Align(pos - offset, layout.Alignment);
+            if (field.Deprecated)
+            {
+                pos += layout.Size;
+                continue;
+            }
 
             TreeNode elem = new TreeNode
             {
@@ -128,7 +134,7 @@ public class FlatBufferBinWalk
 
             thisNode.Nodes.Add(elem);
 
-            pos += GetTypeSize(field.Type.BaseType);
+            pos += layout.Size;
         }
 
         return result;
@@ -157,7 +163,7 @@ public class FlatBufferBinWalk
             case BaseType.Float: val = _reader.ReadSingle(); break;
             case BaseType.Double: val = _reader.ReadDouble(); break;
             case BaseType.String: 
-                val = ReadStringAt(pos);
+                val = ReadStringAt(pos, node);
                 node.Text += $"\"{val}\""; 
                 break;
             case BaseType.Vector:
@@ -167,7 +173,6 @@ public class FlatBufferBinWalk
                 break;
             case BaseType.Obj:
                 node.Text = field.Type.StructName;
-                var tableOffset = pos + ReadIntAt(pos);
                 var structDef = GetStructDef(field.Type.StructName);
 
                 if (structDef != null)
@@ -175,7 +180,7 @@ public class FlatBufferBinWalk
                     if (structDef.IsStruct)
                         val = ReadStruct(structDef, pos, node);
                     else
-                        val = ReadTable(structDef, tableOffset, node);
+                        val = ReadTable(structDef, pos + ReadUIntAt(pos), node, pos);
                 }
                 break;
         }
@@ -206,12 +211,17 @@ public class FlatBufferBinWalk
 
     private object ReadVectorAt(FieldDef field, long pos, TreeNode thisNode)
     {
-        var vectorOffset = pos + ReadIntAt(pos);
+        var vectorOffset = pos + ReadUIntAt(pos);
         var length = ReadIntAt(vectorOffset);
         var dataOffset = vectorOffset + 4;
+        thisNode.ToolTipText = $"Addr: 0x{pos:X4} | Vector: 0x{vectorOffset:X4} | Data: 0x{dataOffset:X4} | Elements: {length}";
 
         var list = new List<object>();
-        var elemSize = GetTypeSize(field.Type.ElementType);
+        var elemSize = GetInlineLayout(new FbsType
+        {
+            BaseType = field.Type.ElementType,
+            StructName = field.Type.StructName
+        }).Size;
 
         FieldDef? elemField = null;
         if (field.Type.ElementType != BaseType.Obj)
@@ -236,7 +246,6 @@ public class FlatBufferBinWalk
             };
             if (field.Type.ElementType == BaseType.Obj)
             {
-                var tableOffset = elemPos + ReadIntAt(elemPos);
                 var structDef = GetStructDef(field.Type.StructName);
                 object? val = null;
                 if (structDef != null)
@@ -244,7 +253,7 @@ public class FlatBufferBinWalk
                     if (structDef.IsStruct)
                         val = ReadStruct(structDef, elemPos, child);
                     else
-                        val = ReadTable(structDef, tableOffset, child);
+                        val = ReadTable(structDef, elemPos + ReadUIntAt(elemPos), child, elemPos);
                 }
                 ArgumentNullException.ThrowIfNull(val);
                 list.Add(val);
@@ -259,10 +268,11 @@ public class FlatBufferBinWalk
         return list;
     }
 
-    private string ReadStringAt(long pos)
+    private string ReadStringAt(long pos, TreeNode node)
     {
-        var stringOffset = pos + ReadIntAt(pos);
+        var stringOffset = pos + ReadUIntAt(pos);
         var length = ReadIntAt(stringOffset);
+        node.ToolTipText = $"Addr: 0x{pos:X4} | String: 0x{stringOffset:X4} | Data: 0x{stringOffset + 4:X4} | Bytes: {length}";
         Seek(stringOffset + 4);
         return Encoding.UTF8.GetString(_reader.ReadBytes(length));
     }
@@ -294,7 +304,46 @@ public class FlatBufferBinWalk
         };
     }
 
-    private int GetTypeSize(BaseType type)
+    private static long Align(long value, int alignment) =>
+        (value + alignment - 1) / alignment * alignment;
+
+    private (int Size, int Alignment) GetInlineLayout(FbsType type)
+    {
+        if (type.BaseType == BaseType.Obj)
+        {
+            var def = GetStructDef(type.StructName)
+                ?? throw new InvalidOperationException($"Unknown type: {type.StructName}");
+            if (def.IsStruct)
+            {
+                long size = 0;
+                int alignment = Math.Max(1, def.MinAlign);
+                if (def.Attributes.TryGetValue("force_align", out var forcedAlignment))
+                    alignment = Math.Max(alignment, int.Parse(forcedAlignment));
+                foreach (var field in def.Fields)
+                {
+                    var member = GetInlineLayout(field.Type);
+                    alignment = Math.Max(alignment, member.Alignment);
+                    size = Align(size, member.Alignment) + member.Size;
+                }
+                return (checked((int)Align(size, alignment)), alignment);
+            }
+        }
+
+        if (type.BaseType == BaseType.Array)
+        {
+            var element = GetInlineLayout(new FbsType
+            {
+                BaseType = type.ElementType,
+                StructName = type.StructName
+            });
+            return (checked(element.Size * type.ArrayLength), element.Alignment);
+        }
+
+        int scalarSize = GetTypeSize(type.BaseType);
+        return (scalarSize, scalarSize);
+    }
+
+    private static int GetTypeSize(BaseType type)
     {
         return type switch
         {
