@@ -242,6 +242,50 @@ public class SchemaParser
 
             foreach (var structDef in _schema.Structs.Values)
             {
+                var expandedFields = new List<FieldDef>();
+                int nextId = 0;
+                foreach (var field in structDef.Fields)
+                {
+                    var unionDef = field.Type.BaseType == BaseType.Obj
+                        ? _schema.Enums.Values.FirstOrDefault(e => e.IsUnion &&
+                            (e.Name == field.Type.StructName || e.Name.EndsWith("." + field.Type.StructName)))
+                        : null;
+                    if (unionDef != null)
+                    {
+                        if (structDef.IsStruct)
+                        {
+                            throw new InvalidDataException("Union fields are not allowed in structs.");
+                        }
+
+                        int payloadId = field.Attributes.TryGetValue("id", out var id)
+                            ? int.Parse(id) : nextId + 1;
+                        if (payloadId < 1)
+                        {
+                            throw new InvalidDataException("A union payload requires a preceding discriminator slot.");
+                        }
+
+                        expandedFields.Add(new FieldDef
+                        {
+                            Name = field.Name + "_type",
+                            Id = payloadId - 1,
+                            Type = new FbsType { BaseType = BaseType.UByte, EnumName = unionDef.Name },
+                            Deprecated = field.Deprecated
+                        });
+                        field.Id = payloadId;
+                        field.Type.BaseType = BaseType.Union;
+                        field.Type.EnumName = unionDef.Name;
+                        field.Type.StructName = "";
+                    }
+                    else
+                    {
+                        field.Id = field.Attributes.TryGetValue("id", out var id) ? int.Parse(id) : nextId;
+                    }
+
+                    nextId = field.Id + 1;
+                    expandedFields.Add(field);
+                }
+
+                structDef.Fields = expandedFields;
                 foreach (var field in structDef.Fields)
                 {
                     if (field.Type.BaseType == BaseType.Obj)
@@ -433,7 +477,7 @@ public class SchemaParser
         {
             Name = ParseIdentifier(),
             IsUnion = isUnion,
-            UnderlyingType = BaseType.Int
+            UnderlyingType = isUnion ? BaseType.UByte : BaseType.Int
         };
         SkipWhitespaceAndComments();
         if (Peek() == ':')
@@ -445,7 +489,12 @@ public class SchemaParser
 
         ParseMetadata(enumDef.Attributes);
         Expect('{');
-        long currentValue = 0;
+        long currentValue = isUnion ? 1 : 0;
+        if (isUnion)
+        {
+            enumDef.Values.Add(new EnumVal { Name = "NONE", Value = 0 });
+        }
+
         while (Peek() != '}')
         {
             if (IsEof())
@@ -463,6 +512,11 @@ public class SchemaParser
             {
                 Next();
                 enumVal.UnionType = ParseType();
+            }
+
+            if (isUnion && enumVal.UnionType == null)
+            {
+                enumVal.UnionType = new FbsType { BaseType = BaseType.Obj, StructName = enumVal.Name };
             }
 
             SkipWhitespaceAndComments();

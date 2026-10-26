@@ -135,7 +135,32 @@ public class FlatBufferBinWalk : IDisposable
                 Offset = offset + fieldOffset,
                 ToolTipText = $"Addr: 0x{offset + fieldOffset:X4}"
             };
-            result[field.Name] = ReadFieldAt(field, offset + fieldOffset, elem);
+            if (field.Type.BaseType == BaseType.Union)
+            {
+                var tagField = structDef.Fields.Single(f => f.Name == field.Name + "_type");
+                var tagSlot = 4 + tagField.Id * 2;
+                var tagOffset = tagSlot < vtableSize ? ReadUShortAt(vtableOffset + tagSlot) : 0;
+                Seek(offset + tagOffset);
+                byte tag = tagOffset == 0 ? (byte)0 : _reader.ReadByte();
+                var unionDef = GetEnumDef(field.Type.EnumName)
+                    ?? throw new InvalidDataException($"Unknown union: {field.Type.EnumName}");
+                var variant = unionDef.Values.SingleOrDefault(v => v.Value == tag);
+                if (variant?.UnionType == null)
+                {
+                    throw new InvalidDataException($"Invalid union tag {tag} for {unionDef.Name}.");
+                }
+
+                result[field.Name] = ReadFieldAt(new FieldDef
+                {
+                    Name = field.Name,
+                    Type = variant.UnionType
+                }, offset + fieldOffset, elem);
+            }
+            else
+            {
+                result[field.Name] = ReadFieldAt(field, offset + fieldOffset, elem);
+            }
+
             thisNode.Children.Add(elem);
         }
 
@@ -381,6 +406,7 @@ public class FlatBufferBinWalk : IDisposable
             BaseType.Float => 0.0f,
             BaseType.Double => 0.0,
             BaseType.String => string.Empty,
+            BaseType.Union => null!,
             _ => throw new Exception("No default value for this type"),
         };
     }
@@ -437,7 +463,7 @@ public class FlatBufferBinWalk : IDisposable
             BaseType.Short or BaseType.UShort => 2,
             BaseType.Int or BaseType.UInt or BaseType.Float => 4,
             BaseType.Long or BaseType.ULong or BaseType.Double => 8,
-            BaseType.String or BaseType.Vector or BaseType.Obj => 4,
+            BaseType.String or BaseType.Vector or BaseType.Obj or BaseType.Union => 4,
             _ => 0
         };
     }
