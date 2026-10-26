@@ -1,0 +1,32 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:media="using:Avalonia.Media"
+             x:Class="FlatbufferToolkit.App" RequestedThemeVariant="Default">
+  <Application.Resources>
+    <ResourceDictionary>
+      <media:FontFamily x:Key="ToolkitUIFont">Segoe UI,Helvetica Neue,Noto Sans,DejaVu Sans,sans-serif</media:FontFamily>
+      <media:FontFamily x:Key="ToolkitMonospaceFont">Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace</media:FontFamily>
+      <CornerRadius x:Key="ControlCornerRadius">0</CornerRadius>
+      <CornerRadius x:Key="OverlayCornerRadius">0</CornerRadius>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="ToolkitBackground">#252525</SolidColorBrush>
+          <SolidColorBrush x:Key="ToolkitPanelBackground">#1E1E1E</SolidColorBrush>
+          <SolidColorBrush x:Key="ToolkitSeparator">#555555</SolidColorBrush>
+          <SolidColorBrush x:Key="ToolkitSelection">#315D80</SolidColorBrush>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="ToolkitBackground">#F0F0F0</SolidColorBrush>
+          <SolidColorBrush x:Key="ToolkitPanelBackground">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ToolkitSeparator">#A0A0A0</SolidColorBrush>
+          <SolidColorBrush x:Key="ToolkitSelection">#0A64AD</SolidColorBrush>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme DensityStyle="Compact" />
+    <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+    <StyleInclude Source="avares://FlatbufferToolkit/UI/Themes/CompactTheme.axaml" />
+  </Application.Styles>
+</Application>

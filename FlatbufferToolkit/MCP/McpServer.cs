@@ -1,5 +1,6 @@
 using FlatbufferToolkit.Utils;
 using System.Net;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 
@@ -10,23 +11,77 @@ namespace FlatbufferToolkit.MCP
         private static McpServerManager? _instance;
         public static McpServerManager Instance => _instance ??= new McpServerManager();
 
-        private readonly Dictionary<string, StreamWriter> _sessions = new();
-
-        private McpServerManager() { }
-
-        public void Start() => Task.Run(ListenAsync);
-
-        private async Task ListenAsync()
+        private readonly ConcurrentDictionary<string, StreamWriter?> _sessions = new();
+        private HttpListener? _listener;
+        private McpServerManager()
         {
-            Logger.Instance.Log(LogLevel.LOG, "Server started on http://localhost:8765/");
+        }
+
+        public void Start()
+        {
+            if (_listener != null)
+            {
+                return;
+            }
+
             var listener = new HttpListener();
             listener.Prefixes.Add("http://localhost:8765/");
-            listener.Start();
-
-            while (true)
+            try
             {
-                var ctx = await listener.GetContextAsync();
-                _ = Task.Run(() => HandleRequest(ctx));
+                listener.Start();
+                _listener = listener;
+                Logger.Instance.Log(LogLevel.LOG, "Server started on http://localhost:8765/");
+                _ = ListenAsync(listener);
+            }
+            catch (Exception ex)
+            {
+                listener.Close();
+                Logger.Instance.Log(LogLevel.ERROR, $"MCP server could not start: {ex.Message}");
+            }
+        }
+
+        public void Stop()
+        {
+            var listener = _listener;
+            _listener = null;
+            listener?.Close();
+            foreach (var writer in _sessions.Values)
+            {
+                writer?.Dispose();
+            }
+
+            _sessions.Clear();
+        }
+
+        private async Task ListenAsync(HttpListener listener)
+        {
+            try
+            {
+                while (listener.IsListening)
+                {
+                    var ctx = await listener.GetContextAsync();
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await HandleRequest(ctx);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Instance.Log(LogLevel.ERROR, ex.Message);
+                            try
+                            {
+                                ctx.Response.Close();
+                            }
+                            catch
+                            {
+                            }
+                        }
+                    });
+                }
+            }
+            catch (Exception ex) when (ex is HttpListenerException or ObjectDisposedException)
+            {
             }
         }
 
@@ -34,30 +89,49 @@ namespace FlatbufferToolkit.MCP
         {
             var path = ctx.Request.Url?.AbsolutePath;
             var method = ctx.Request.HttpMethod;
-
             Logger.Instance.Log(LogLevel.LOG, $"{method} {path}");
             LogHeaders(ctx.Request.Headers, "REQ HEADERS");
-
             ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-
             if (path == "/mcp" || path == "/sse")
             {
-                if (method == "POST") await HandlePost(ctx);
-                else if (method == "GET") await HandleSse(ctx);
-                else if (method == "DELETE") await HandleDelete(ctx);
-                else ctx.Response.StatusCode = 405;
+                if (method == "POST")
+                {
+                    await HandlePost(ctx);
+                }
+                else if (method == "GET")
+                {
+                    await HandleSse(ctx);
+                }
+                else if (method == "DELETE")
+                {
+                    await HandleDelete(ctx);
+                }
+                else
+                {
+                    ctx.Response.StatusCode = 405;
+                }
             }
             else if (path == "/message" && method == "POST")
+            {
                 await HandleMessage(ctx);
+            }
             else if (path is "/.well-known/oauth-protected-resource" or "/.well-known/oauth-protected-resource/sse")
+            {
                 await HandleOAuthDiscovery(ctx);
+            }
             else
             {
                 Logger.Instance.Log(LogLevel.LOG, $"404 unhandled: {method} {path}");
                 ctx.Response.StatusCode = 404;
             }
 
-            try { ctx.Response.Close(); } catch { }
+            try
+            {
+                ctx.Response.Close();
+            }
+            catch
+            {
+            }
         }
 
         private async Task HandleOAuthDiscovery(HttpListenerContext ctx)
@@ -73,20 +147,16 @@ namespace FlatbufferToolkit.MCP
         {
             var sessionId = Guid.NewGuid().ToString();
             Logger.Instance.Log(LogLevel.LOG, $"SSE connection opened, sessionId={sessionId}");
-
             ctx.Response.ContentType = "text/event-stream";
             ctx.Response.Headers.Add("Cache-Control", "no-cache");
             ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-
             var writer = new StreamWriter(ctx.Response.OutputStream, Encoding.UTF8, leaveOpen: true);
             _sessions[sessionId] = writer;
-
             try
             {
                 var endpoint = $"http://localhost:8765/message?sessionId={sessionId}";
                 Logger.Instance.Log(LogLevel.LOG, $"SSE sending endpoint: {endpoint}");
                 await SendSseEvent(writer, $"{{\"type\":\"endpoint\",\"uri\":\"{endpoint}\"}}");
-
                 while (true)
                 {
                     await Task.Delay(15000);
@@ -95,11 +165,14 @@ namespace FlatbufferToolkit.MCP
                     await writer.FlushAsync();
                 }
             }
-            catch (Exception ex) { Logger.Instance.Log(LogLevel.LOG, $"SSE stream closed: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                Logger.Instance.Log(LogLevel.LOG, $"SSE stream closed: {ex.Message}");
+            }
             finally
             {
                 Logger.Instance.Log(LogLevel.LOG, $"SSE session removed: {sessionId}");
-                _sessions.Remove(sessionId);
+                _sessions.TryRemove(sessionId, out _);
                 writer.Dispose();
             }
         }
@@ -108,11 +181,8 @@ namespace FlatbufferToolkit.MCP
         {
             ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
             ctx.Response.StatusCode = 202;
-            ctx.Response.Close();
-
             var sessionId = ctx.Request.QueryString["sessionId"];
             Logger.Instance.Log(LogLevel.LOG, $"SSE message received, sessionId={sessionId}");
-
             if (sessionId == null || !_sessions.TryGetValue(sessionId, out var sseWriter) || sseWriter == null)
             {
                 Logger.Instance.Log(LogLevel.LOG, $"SSE message dropped — session not found: {sessionId}");
@@ -123,7 +193,6 @@ namespace FlatbufferToolkit.MCP
             using var reader = new StreamReader(ctx.Request.InputStream);
             var body = await reader.ReadToEndAsync();
             Logger.Instance.Log(LogLevel.LOG, $"--> (SSE) {body}");
-
             try
             {
                 using var doc = JsonDocument.Parse(body);
@@ -131,7 +200,10 @@ namespace FlatbufferToolkit.MCP
                 Logger.Instance.Log(LogLevel.LOG, $"<-- (SSE) {response}");
                 await SendSseEvent(sseWriter, response);
             }
-            catch (Exception ex) { Logger.Instance.Log(LogLevel.LOG, $"SSE message error: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                Logger.Instance.Log(LogLevel.LOG, $"SSE message error: {ex.Message}");
+            }
         }
 
         private static async Task SendSseEvent(StreamWriter writer, string data)
@@ -145,7 +217,6 @@ namespace FlatbufferToolkit.MCP
             using var reader = new StreamReader(ctx.Request.InputStream);
             var body = await reader.ReadToEndAsync();
             Logger.Instance.Log(LogLevel.LOG, $"--> (POST) {body}");
-
             if (string.IsNullOrWhiteSpace(body))
             {
                 Logger.Instance.Log(LogLevel.LOG, "POST body was empty — returning 400");
@@ -154,7 +225,10 @@ namespace FlatbufferToolkit.MCP
             }
 
             JsonDocument doc;
-            try { doc = JsonDocument.Parse(body); }
+            try
+            {
+                doc = JsonDocument.Parse(body);
+            }
             catch (Exception ex)
             {
                 Logger.Instance.Log(LogLevel.LOG, $"POST JSON parse error: {ex.Message}");
@@ -165,7 +239,6 @@ namespace FlatbufferToolkit.MCP
             using (doc)
             {
                 var root = doc.RootElement;
-
                 if (IsNotificationOrResponse(root))
                 {
                     Logger.Instance.Log(LogLevel.LOG, "POST is notification/response — returning 202");
@@ -175,13 +248,11 @@ namespace FlatbufferToolkit.MCP
 
                 var method = root.TryGetProperty("method", out var m) ? m.GetString() : null;
                 Logger.Instance.Log(LogLevel.LOG, $"POST method={method}");
-
                 if (method != "initialize")
                 {
                     var sessionId = ctx.Request.Headers["Mcp-Session-Id"];
                     Logger.Instance.Log(LogLevel.LOG, $"POST session check: Mcp-Session-Id={sessionId}, known={_sessions.ContainsKey(sessionId ?? "")}");
                     Logger.Instance.Log(LogLevel.LOG, $"Active sessions: [{string.Join(", ", _sessions.Keys)}]");
-
                     if (sessionId == null || !_sessions.ContainsKey(sessionId))
                     {
                         Logger.Instance.Log(LogLevel.LOG, "POST rejected — session not found, returning 400");
@@ -192,7 +263,6 @@ namespace FlatbufferToolkit.MCP
 
                 var response = BuildResponse(root);
                 Logger.Instance.Log(LogLevel.LOG, $"<-- (POST) {response}");
-
                 if (method == "initialize")
                 {
                     var newSessionId = Guid.NewGuid().ToString();
@@ -220,7 +290,10 @@ namespace FlatbufferToolkit.MCP
             var sessionId = ctx.Request.Headers["Mcp-Session-Id"];
             Logger.Instance.Log(LogLevel.LOG, $"DELETE session: {sessionId}");
             if (sessionId != null)
-                _sessions.Remove(sessionId);
+            {
+                _sessions.TryRemove(sessionId, out _);
+            }
+
             ctx.Response.StatusCode = 200;
             return Task.CompletedTask;
         }
@@ -231,9 +304,16 @@ namespace FlatbufferToolkit.MCP
             var hasId = root.TryGetProperty("id", out _);
             var hasResult = root.TryGetProperty("result", out _);
             var hasError = root.TryGetProperty("error", out _);
+            if (!hasMethod && (hasResult || hasError))
+            {
+                return true;
+            }
 
-            if (!hasMethod && (hasResult || hasError)) return true;
-            if (hasMethod && !hasId) return true;
+            if (hasMethod && !hasId)
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -241,34 +321,56 @@ namespace FlatbufferToolkit.MCP
         {
             var method = root.TryGetProperty("method", out var m) ? m.GetString() : null;
             var id = root.TryGetProperty("id", out var idEl) ? idEl.Clone() : default;
-
             object result = method switch
             {
                 "initialize" => BuildInitialize(),
                 "tools/list" => BuildToolList(),
                 "tools/call" => McpToolManager.Instance.CallTool(root.GetProperty("params")),
-                _ => new { }
+                _ => new
+                {
+                }
             };
-
-            return JsonSerializer.Serialize(new { jsonrpc = "2.0", id, result });
+            return JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id,
+                result
+            });
         }
 
-        private static object BuildInitialize() => new
+        private static object BuildInitialize()
         {
-            protocolVersion = "2025-06-18",
-            capabilities = new { tools = new { } },
-            serverInfo = new { name = "flatbuffer_toolkit", version = "1.0.0" }
-        };
+            return new
+            {
+                protocolVersion = "2025-06-18",
+                capabilities = new
+                {
+                    tools = new
+                    {
+                    }
+                },
+                serverInfo = new
+                {
+                    name = "flatbuffer_toolkit",
+                    version = "1.0.0"
+                }
+            };
+        }
 
-        private static object BuildToolList() => new
+        private static object BuildToolList()
         {
-            tools = McpToolManager.Tools.Select(t => t.ToSchema())
-        };
+            return new
+            {
+                tools = McpToolManager.Tools.Select(t => t.ToSchema())
+            };
+        }
 
         private static void LogHeaders(System.Collections.Specialized.NameValueCollection headers, string label)
         {
             foreach (string key in headers)
+            {
                 Logger.Instance.Log(LogLevel.LOG, $"[MCP] {label}: {key}={headers[key]}");
+            }
         }
     }
 }

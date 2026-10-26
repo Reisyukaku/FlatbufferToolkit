@@ -1,19 +1,17 @@
-using FlatbufferToolkit.MCP;
+using Avalonia;
 
 namespace FlatbufferToolkit;
 
 internal static class Program
 {
-    /// <summary>
-    ///  The main entry point for the application.
-    /// </summary>
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
-        var args = Environment.GetCommandLineArgs();
-        if (args.Any(z => z.EndsWith("-dark")))
-            Application.SetColorMode(SystemColorMode.Dark);
-        ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm());
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        return AppBuilder.Configure<App>().UsePlatformDetect().WithInterFont().LogToTrace();
     }
 }

@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:FlatbufferToolkit.UI.Models"
+             x:Class="FlatbufferToolkit.UI.Controls.DataInspector">
+  <Grid RowDefinitions="Auto,Auto,*">
+    <TextBlock Text="Data inspector" Classes="pane-header" />
+    <TextBlock Grid.Row="1" Text="Little endian" FontSize="11" Margin="6,0,6,4" Opacity="0.7" />
+    <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <ItemsControl x:Name="Values">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:InspectorValue">
+            <Grid ColumnDefinitions="52,*" MinWidth="220">
+              <Border Classes="inspector-cell" Background="{DynamicResource ToolkitBackground}">
+                <TextBlock Text="{Binding Name}" FontSize="12" />
+              </Border>
+              <Border Grid.Column="1" Classes="inspector-cell" Background="{DynamicResource ToolkitPanelBackground}">
+                <TextBlock Text="{Binding Value}" FontSize="12" HorizontalAlignment="Right"
+                           FontFamily="{DynamicResource ToolkitMonospaceFont}" />
+              </Border>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
